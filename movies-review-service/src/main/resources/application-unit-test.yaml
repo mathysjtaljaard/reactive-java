@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile:
+      - unit-test
+  mongodb:
+    embedded:
+      version: 3.0.0
+  data:
+    mongodb:
+      port: 0

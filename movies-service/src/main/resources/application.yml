@@ -1,0 +1,19 @@
+spring:
+  profiles:
+    active: local
+server:
+  port: 8082
+
+# service: {
+#   name:  movies-info,
+#   connection-details: {
+#     host: localhost,
+#     port: 8080,
+#     basePath: /v1/movies/info
+#   }
+# }
+rest-clients:
+  movies-info: 
+    service-url: "http://localhost:8080/v1/movies/info"
+  movies-review:
+    service-url: "http://localhost:8081/v1/reviews"

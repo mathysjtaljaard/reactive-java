@@ -1,0 +1,57 @@
+plugins {
+	id 'org.springframework.boot' version '2.5.3'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+}
+
+group = 'com.reactivespring'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+ext {
+    mapstructVersion = "1.4.2.Final"
+    lombokVersion = "1.18.20"
+    lombokMapstructBindingVersion = "0.2.0"
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation "org.mapstruct:mapstruct:${mapstructVersion}", "org.projectlombok:lombok:${lombokVersion}"
+
+	//validator
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	//lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	//devtools
+	compileOnly "org.springframework.boot:spring-boot-devtools"
+
+	//test
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo'
+	testImplementation 'io.projectreactor:reactor-test'
+
+	/*
+        this example uses lombok directly over the annotationProcessor,
+        the io.freefair.lombok plugin works as well.
+        The freefair-lombok plugin is used in the example mapstruct-on-gradle-testcp-with-lombok
+     */
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}", "org.projectlombok:lombok:${lombokVersion}", "org.projectlombok:lombok-mapstruct-binding:${lombokMapstructBindingVersion}"
+}
+
+test {
+	useJUnitPlatform()
+}
