@@ -9,7 +9,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,5 +30,6 @@ public class MovieInfo {
     private List<@NotBlank(message = "movieInfo.cast must be present") String> cast;
 
     @JsonAlias({ "release_date" })
+    @JsonProperty("release_date")
     private LocalDate releaseDate;
 }

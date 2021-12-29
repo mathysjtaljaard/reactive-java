@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile:
+      - unit-test
+
+rest-clients:
+  movies-info: 
+    service-url: "http://localhost:8084/v1/movies/info"
+  movies-review:
+    service-url: "http://localhost:8084/v1/reviews"
