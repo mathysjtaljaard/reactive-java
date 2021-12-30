@@ -9,3 +9,6 @@ rest-clients:
     service-url: "http://localhost:8084/v1/movies/info"
   movies-review:
     service-url: "http://localhost:8084/v1/reviews"
+
+wiremock:
+  reset-mappings-after-each-test: true

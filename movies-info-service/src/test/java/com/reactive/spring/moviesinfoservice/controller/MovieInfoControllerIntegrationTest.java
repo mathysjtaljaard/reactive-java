@@ -20,6 +20,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.*;
 
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("unit-test")
@@ -252,5 +255,39 @@ public class MovieInfoControllerIntegrationTest {
                 .bodyValue(requestData)
                 .exchange()
                 .expectStatus().isNotFound();
+    }
+
+    @Test
+    public void getAllMoviesStream() throws Exception {
+
+        MovieInfo infoToAdd = MovieInfo.builder()
+                .movieInfoId("123456")
+                .name("Jack the Ripper")
+                .cast(List.of("Jenny", "David"))
+                .releaseDate(LocalDate.parse("2022-01-01"))
+                .year(2022)
+                .build();
+
+        String requestData = mapper.writeValueAsString(infoToAdd);
+
+        webTestClient.post()
+                .uri("/v1/movies/info/add")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestData)
+                .exchange()
+                .expectStatus().isCreated();
+
+        Flux<MovieInfo> responseFlux = webTestClient.get()
+                .uri("/v1/movies/info/stream")
+                .exchange()
+                .expectStatus().is2xxSuccessful()
+                .returnResult(MovieInfo.class)
+                .getResponseBody();
+
+        StepVerifier.create(responseFlux).assertNext(movieInfo -> {
+            assert movieInfo.getMovieInfoId() != null;
+        })
+                .thenCancel()
+                .verify();
     }
 }

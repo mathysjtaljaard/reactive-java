@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.reactivespring.base.BaseIntegrationTest;
 import com.reactivespring.domain.*;
 
@@ -92,8 +93,11 @@ public class MoviesControllerIntegrationTest extends BaseIntegrationTest {
                                 .expectBody(String.class)
                                 .consumeWith(result -> {
                                         System.out.println(result.getResponseBody());
-
+                                        assert ("No movie information found for movie info id : " + MOVIE_INFO_ID)
+                                                        .equals(result.getResponseBody());
                                 });
+
+                WireMock.verify(1, getRequestedFor(urlEqualTo("/v1/movies/info/" + MOVIE_INFO_ID)));
         }
 
         @Test
@@ -157,7 +161,48 @@ public class MoviesControllerIntegrationTest extends BaseIntegrationTest {
                                 .is5xxServerError()
                                 .expectBody(String.class)
                                 .consumeWith(result -> {
-                                        System.out.println(result.getResponseBody());
+                                        assert "Movie Info Rest Client Exception. Message -> Movie Service Unavailable"
+                                                        .equals(result.getResponseBody());
                                 });
+
+                // WireMock verify used with getRequested for will test the stub endpoint count
+                WireMock.verify(4, WireMock.getRequestedFor(urlEqualTo("/v1/movies/info/" + MOVIE_INFO_ID)));
+        }
+
+        @Test
+        public void testRetieveMovieById_5xxResponseErrors_ReviewService() throws JsonProcessingException {
+
+                String movieInfoJSON = mapper.writeValueAsString(getMovie().getMovieInfo());
+
+                stubFor(
+                                get(urlEqualTo("/v1/movies/info/" + MOVIE_INFO_ID))
+                                                .willReturn(
+                                                                aResponse()
+                                                                                .withHeader(HttpHeaders.CONTENT_TYPE,
+                                                                                                ContentType.APPLICATION_JSON
+                                                                                                                .toString())
+                                                                                .withBody(movieInfoJSON)));
+
+                stubFor(
+                                get(urlEqualTo("/v1/reviews?movieInfoId=" + MOVIE_INFO_ID))
+                                                .willReturn(
+                                                                aResponse()
+                                                                                .withStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR
+                                                                                                .code())
+                                                                                .withBody("Review Service Unavailable")));
+
+                webTestClient.get()
+                                .uri(MOVIES_PATH + "/{movieInfoId}", MOVIE_INFO_ID)
+                                .exchange()
+                                .expectStatus()
+                                .is5xxServerError()
+                                .expectBody(String.class)
+                                .consumeWith(result -> {
+                                        assert "Reviews Rest Client Exception. Message -> Review Service Unavailable"
+                                                        .equals(result.getResponseBody());
+                                });
+
+                // WireMock verify used with getRequested for will test the stub endpoint count
+                WireMock.verify(4, WireMock.getRequestedFor(urlPathMatching("/v1/reviews*")));
         }
 }

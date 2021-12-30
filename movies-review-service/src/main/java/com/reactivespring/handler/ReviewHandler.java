@@ -10,7 +10,7 @@ import com.reactivespring.exception.*;
 import com.reactivespring.repository.ReviewReactiveRepository;
 import com.reactivespring.router.ReviewRouter;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.*;
 
@@ -25,6 +25,7 @@ public class ReviewHandler {
 
     private final ReviewReactiveRepository reviewReactiveRepository;
     private final Validator validator;
+    private final Sinks.Many<Review> reviewsReplaySink = Sinks.many().replay().all();
 
     private static final String MOVIE_INFO_ID_QUERY_PARAM = ReviewRouter.REVIEW_QUERY_PARAMETER_MOVIE_INFO_ID;
     private static final String REVIEW_ID_PATH_VARIABLE = ReviewRouter.REVIEW_PATH_PARAMETER;
@@ -41,11 +42,20 @@ public class ReviewHandler {
         }
     }
 
+    public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
+        return ServerResponse
+                .ok()
+                .contentType(MediaType.APPLICATION_NDJSON)
+                .body(reviewsReplaySink.asFlux(), Review.class)
+                .log();
+    }
+
     public Mono<ServerResponse> addReview(ServerRequest request) {
 
         return request.bodyToMono(Review.class).log()
                 .doOnNext(this::validate)
                 .flatMap(reviewReactiveRepository::save).log()
+                .doOnNext(reviewsReplaySink::tryEmitNext)
                 .flatMap(ServerResponse.status(HttpStatus.CREATED)::bodyValue).log();
     }
 

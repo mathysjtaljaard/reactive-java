@@ -6,6 +6,7 @@ import javax.validation.constraints.NotEmpty;
 
 import com.reactivespring.domain.Review;
 import com.reactivespring.exception.*;
+import com.reactivespring.util.RetryUtil;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.http.HttpStatus;
@@ -24,36 +25,62 @@ import reactor.core.publisher.*;
 @Data
 public class ReviewsRestClient {
 
-        private final WebClient webClient;
+    private final WebClient webClient;
 
-        @NotEmpty
-        private String serviceUrl;
+    @NotEmpty
+    private String serviceUrl;
 
-        public Flux<Review> retrieveReviews(String movieInfoId) {
-                URI uri = UriComponentsBuilder
-                                .fromHttpUrl(serviceUrl)
-                                .queryParam("movieInfoId", movieInfoId).buildAndExpand()
-                                .toUri();
+    public Flux<Review> retrieveReviews(String movieInfoId) {
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(serviceUrl)
+                .queryParam("movieInfoId", movieInfoId).buildAndExpand()
+                .toUri();
 
-                return webClient
-                                .get()
-                                .uri(uri)
-                                .retrieve()
-                                .onStatus(HttpStatus::is4xxClientError, ex -> {
-                                        if (HttpStatus.NOT_FOUND.equals(ex.statusCode())) {
-                                                return Mono.empty();
-                                        }
+        return webClient
+                .get()
+                .uri(uri)
+                .retrieve()
+                .onStatus(HttpStatus::is4xxClientError, ex -> {
+                    if (HttpStatus.NOT_FOUND.equals(ex.statusCode())) {
+                        return Mono.empty();
+                    }
 
-                                        return ex.bodyToMono(String.class)
-                                                        .flatMap(message -> Mono.error(new ReviewsClientException(
-                                                                        message, ex.rawStatusCode())));
-                                })
-                                .onStatus(HttpStatus::is5xxServerError, ex -> {
-                                        return ex.bodyToMono(String.class)
-                                                        .flatMap(message -> Mono.error(new ReviewsServerException(
-                                                                        "Reviews Rest Client Exception. Message -> "
-                                                                                        + message)));
-                                })
-                                .bodyToFlux(Review.class).log();
-        }
+                    return ex.bodyToMono(String.class)
+                            .flatMap(message -> Mono.error(new ReviewsClientException(
+                                    message, ex.rawStatusCode())));
+                })
+                .onStatus(HttpStatus::is5xxServerError, ex -> {
+                    return ex.bodyToMono(String.class)
+                            .flatMap(message -> Mono.error(new ReviewsServerException(
+                                    "Reviews Rest Client Exception. Message -> "
+                                            + message)));
+                })
+                .bodyToFlux(Review.class).log()
+                .retryWhen(RetryUtil.retrySpec());
+    }
+
+    public Flux<Review> retrieveReviewsStream() {
+
+        return webClient
+                .get()
+                .uri(serviceUrl.concat("/stream"))
+                .retrieve()
+                .onStatus(HttpStatus::is4xxClientError, ex -> {
+                    if (HttpStatus.NOT_FOUND.equals(ex.statusCode())) {
+                        return Mono.empty();
+                    }
+
+                    return ex.bodyToMono(String.class)
+                            .flatMap(message -> Mono.error(new ReviewsClientException(
+                                    message, ex.rawStatusCode())));
+                })
+                .onStatus(HttpStatus::is5xxServerError, ex -> {
+                    return ex.bodyToMono(String.class)
+                            .flatMap(message -> Mono.error(new ReviewsServerException(
+                                    "Reviews Rest Client Exception. Message -> "
+                                            + message)));
+                })
+                .bodyToFlux(Review.class).log()
+                .retryWhen(RetryUtil.retrySpec());
+    }
 }

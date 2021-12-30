@@ -12,11 +12,15 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.util.*;
 
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+
 public class ReviewsIntegrationTest extends BaseIntegrationTest {
 
     private static final String REVIEW_PATH = ReviewRouter.REVIEW_PATH;
     private static final String REVIEW_WITH_PATH_PARAM_REVIEWID = REVIEW_PATH
             + ReviewRouter.REVIEW_PATH_REVIEW_PATH_PARAMETER_PATTERN;
+    private static final String REVIEW_STREAM_PAHT = REVIEW_PATH + ReviewRouter.REVIEW_STREAM_PATH;
     private static final String REVIEW_QUERY_PARAM_MOVIE_INFO_ID = ReviewRouter.REVIEW_QUERY_PARAMETER_MOVIE_INFO_ID;
 
     @Autowired
@@ -138,5 +142,30 @@ public class ReviewsIntegrationTest extends BaseIntegrationTest {
                     assert reviews != null;
                     assert reviews.size() == 2;
                 });
+    }
+
+    @Test
+    public void getReviewsStream() {
+
+        webTestClient.post()
+                .uri(REVIEW_PATH)
+                .bodyValue(new Review(null, "2", "This was just junk", 1.0))
+                .exchange()
+                .expectStatus().isCreated();
+
+        Flux<Review> reviewStream = webTestClient.get().uri(REVIEW_STREAM_PAHT)
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(Review.class)
+                .getResponseBody().log();
+
+        StepVerifier.create(reviewStream)
+                .assertNext(review -> {
+                    System.out.println("TEST RESULTS -> " + review);
+                    assert review.getRating() != null;
+                })
+                .expectNextCount(3)
+                .thenCancel()
+                .verify();
     }
 }
